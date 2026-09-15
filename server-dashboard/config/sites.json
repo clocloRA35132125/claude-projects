@@ -1,0 +1,10 @@
+[
+  {
+    "id": "blindtest",
+    "name": "Blindtest",
+    "url": "https://blindtest.example.com",
+    "healthCheck": { "target": "http://127.0.0.1:3000" },
+    "process": { "match": "blindtest" },
+    "statsEndpoint": "http://127.0.0.1:3000/internal/stats"
+  }
+]

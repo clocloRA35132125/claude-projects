@@ -1,0 +1,17 @@
+[Unit]
+Description=Server Dashboard (private monitoring UI, Tailscale only)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=server
+WorkingDirectory=/home/server/server-dashboard
+EnvironmentFile=/home/server/server-dashboard/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

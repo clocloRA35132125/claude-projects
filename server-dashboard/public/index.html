@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Server Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app-shell">
+
+  <div class="mobile-topbar">
+    <button id="sidebar-toggle" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <span class="brand-name">Server Dashboard</span>
+    <span class="live-dot"></span>
+  </div>
+
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-mark">◆</span>
+      <span class="brand-name">Server Dashboard</span>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item active" data-scroll="section-overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Vue d'ensemble
+      </button>
+      <div class="nav-section-label">Sites hébergés</div>
+      <div id="nav-sites" class="nav-sites"></div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="live-indicator">
+        <span class="live-dot"></span>
+        <span id="last-updated">Connexion…</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <section id="section-overview" class="section">
+      <div class="section-heading">
+        <div>
+          <h1>Vue d'ensemble</h1>
+          <p class="section-sub">État du serveur en temps réel</p>
+        </div>
+        <div class="range-select" id="range-select">
+          <button data-range="1h" class="active">1h</button>
+          <button data-range="6h">6h</button>
+          <button data-range="24h">24h</button>
+          <button data-range="7d">7j</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card" id="kpi-cpu">
+          <div class="kpi-top">
+            <span class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>
+            </span>
+            <span class="kpi-label">CPU</span>
+            <span class="trend-badge" id="trend-cpu">—</span>
+          </div>
+          <div class="kpi-value" id="cpu-value">—</div>
+          <div class="spark-wrap"><canvas id="spark-cpu"></canvas></div>
+        </div>
+
+        <div class="kpi-card" id="kpi-mem">
+          <div class="kpi-top">
+            <span class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="1"/><path d="M7 7v10M11 7v10M15 7v10"/></svg>
+            </span>
+            <span class="kpi-label">Mémoire</span>
+            <span class="trend-badge" id="trend-mem">—</span>
+          </div>
+          <div class="kpi-value" id="mem-value">—</div>
+          <div class="spark-wrap"><canvas id="spark-mem"></canvas></div>
+        </div>
+
+        <div class="kpi-card" id="kpi-disk">
+          <div class="kpi-top">
+            <span class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4 3 9 3s9-1.34 9-3v-6"/></svg>
+            </span>
+            <span class="kpi-label">Disque (/)</span>
+          </div>
+          <div class="kpi-value" id="disk-value">—</div>
+          <div class="bar"><div class="bar-fill" id="disk-bar"></div></div>
+        </div>
+
+        <div class="kpi-card" id="kpi-net">
+          <div class="kpi-top">
+            <span class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20l-7-7a10 10 0 0114 0l-7 7z"/><path d="M12 20l-3.5-3.5a5 5 0 017 0L12 20z"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+            </span>
+            <span class="kpi-label">Réseau</span>
+          </div>
+          <div class="kpi-value" id="net-value">—</div>
+          <div class="spark-wrap"><canvas id="spark-net"></canvas></div>
+        </div>
+
+        <div class="kpi-card secondary" id="kpi-load">
+          <div class="kpi-top">
+            <span class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 1116 0"/><path d="M12 15l3-4"/></svg>
+            </span>
+            <span class="kpi-label">Load average</span>
+          </div>
+          <div class="kpi-value small" id="load-value">—</div>
+        </div>
+
+        <div class="kpi-card secondary" id="kpi-uptime">
+          <div class="kpi-top">
+            <span class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            </span>
+            <span class="kpi-label">Uptime serveur</span>
+          </div>
+          <div class="kpi-value small" id="uptime-value">—</div>
+        </div>
+
+        <div class="kpi-card secondary" id="temp-card" hidden>
+          <div class="kpi-top">
+            <span class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14V5a2 2 0 114 0v9a4 4 0 11-4 0z"/></svg>
+            </span>
+            <span class="kpi-label">Température CPU</span>
+          </div>
+          <div class="kpi-value small" id="temp-value">—</div>
+        </div>
+      </div>
+
+      <div class="chart-panel">
+        <div class="chart-panel-header">
+          <h2>CPU &amp; Mémoire</h2>
+          <span class="muted">survole le graphique pour le détail</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-main"></canvas></div>
+      </div>
+
+      <div class="chart-panel">
+        <div class="chart-panel-header">
+          <h2>Réseau</h2>
+          <span class="muted">débit entrant / sortant</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-network"></canvas></div>
+      </div>
+    </section>
+
+    <section id="section-sites" class="section">
+      <div class="section-heading">
+        <div>
+          <h1>Sites hébergés</h1>
+          <p class="section-sub">Statut, performance et fréquentation</p>
+        </div>
+      </div>
+
+      <div id="sites-container" class="sites-grid"></div>
+
+      <div class="site-detail" id="site-detail" hidden>
+        <div class="site-detail-header">
+          <div>
+            <h2 id="detail-name">—</h2>
+            <span class="status-badge unknown" id="detail-status">—</span>
+          </div>
+          <a class="site-link" id="detail-link" href="#" target="_blank" rel="noopener">Ouvrir le site →</a>
+        </div>
+
+        <div class="detail-kpis">
+          <div class="detail-kpi">
+            <span>Disponibilité (<span id="detail-range-label">1h</span>)</span>
+            <b id="detail-uptime">—</b>
+          </div>
+          <div class="detail-kpi">
+            <span>Réponse moyenne</span>
+            <b id="detail-avg-resp">—</b>
+          </div>
+          <div class="detail-kpi">
+            <span>Pic de joueurs</span>
+            <b id="detail-peak-players">—</b>
+          </div>
+          <div class="detail-kpi">
+            <span>Incidents détectés</span>
+            <b id="detail-incidents">—</b>
+          </div>
+        </div>
+
+        <div class="tabs" id="detail-tabs">
+          <button data-metric="connected_players" class="active">Joueurs connectés</button>
+          <button data-metric="response_ms">Temps de réponse</button>
+          <button data-metric="cpu_percent">CPU</button>
+          <button data-metric="mem_rss">Mémoire</button>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-detail"></canvas></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
