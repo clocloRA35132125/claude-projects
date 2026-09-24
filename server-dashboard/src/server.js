@@ -13,6 +13,7 @@ const HOST = process.env.HOST || '127.0.0.1';
 const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS || 10000);
 const RETENTION_DAYS = Number(process.env.RETENTION_DAYS || 30);
 
+app.use(express.json());
 app.use('/api', apiRouter);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 

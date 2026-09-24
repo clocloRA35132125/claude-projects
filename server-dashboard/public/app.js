@@ -17,6 +17,25 @@ let activeDetailMetric = 'connected_players';
 let mainChart, networkChart, detailChart;
 const sparklines = {};
 
+let selectedPlayersSiteId = null;
+let playersData = [];
+let catalogData = { rarities: {}, kinds: [], items: [] };
+let activeModalPlayer = null;
+let activeCatalogTab = 'all';
+let selectedBanDuration = '24h';
+let banCustomValue = 1;
+let banCustomUnit = 'hours';
+
+const BAN_DURATIONS = [
+  { key: '1h', ms: 60 * 60 * 1000, label: '1h' },
+  { key: '24h', ms: 24 * 60 * 60 * 1000, label: '24h' },
+  { key: '7d', ms: 7 * 24 * 60 * 60 * 1000, label: '7j' },
+  { key: '30d', ms: 30 * 24 * 60 * 60 * 1000, label: '30j' },
+];
+
+const BAN_UNIT_MS = { minutes: 60 * 1000, hours: 60 * 60 * 1000, days: 24 * 60 * 60 * 1000 };
+const BAN_UNIT_LABELS = { minutes: 'minute(s)', hours: 'heure(s)', days: 'jour(s)' };
+
 const METRIC_DEFS = {
   connected_players: { label: 'Joueurs connectés', color: '#5b8cff', transform: (v) => v },
   response_ms: { label: 'Temps de réponse (ms)', color: '#fbbf24', transform: (v) => v },
@@ -436,6 +455,460 @@ function updateSparklinesAndTrends(rows) {
   setTrend('trend-mem', trendFor(memRows, 'pct'));
 }
 
+/* ---------------- players ---------------- */
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function kindLabel(kind) {
+  const found = catalogData.kinds.find((k) => k.kind === kind);
+  if (found) return found.label;
+  return kind === 'other' ? 'Autres objets' : kind;
+}
+
+function findCatalogItem(itemId) {
+  return catalogData.items.find((i) => i.id === itemId);
+}
+
+function setupPlayersSection() {
+  const playersSites = sitesMeta.filter((s) => s.hasPlayers);
+  if (!playersSites.length) return;
+
+  el('nav-players').hidden = false;
+  el('section-players').hidden = false;
+
+  const select = el('players-site-select');
+  if (playersSites.length > 1) {
+    select.hidden = false;
+    select.innerHTML = playersSites.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+    select.addEventListener('change', () => loadPlayers(select.value));
+  }
+
+  el('players-search').addEventListener('input', () => {
+    renderPlayersTable(playersData, el('players-search').value);
+  });
+
+  loadPlayers(playersSites[0].id);
+}
+
+async function loadPlayers(siteId) {
+  selectedPlayersSiteId = siteId;
+  try {
+    const data = await fetchJson(`/api/players/${siteId}`);
+    playersData = data.players;
+    catalogData = data.catalog;
+  } catch (e) {
+    playersData = [];
+    catalogData = { rarities: {}, kinds: [], items: [] };
+  }
+  renderPlayersTable(playersData, el('players-search').value);
+}
+
+function renderPlayersTable(players, search) {
+  const term = (search || '').trim().toLowerCase();
+  const filtered = term ? players.filter((p) => p.username.toLowerCase().includes(term)) : players;
+
+  const tbody = el('players-tbody');
+  tbody.innerHTML = '';
+  el('players-empty').hidden = filtered.length > 0;
+
+  filtered.forEach((p) => {
+    const tr = document.createElement('tr');
+    tr.className = 'player-row';
+    tr.dataset.id = p.id;
+    tr.innerHTML = `
+      <td class="player-username">${escapeHtml(p.username)}${p.ban ? '<span class="ban-badge">Banni</span>' : ''}</td>
+      <td>${new Date(p.createdAt).toLocaleDateString('fr-FR')}</td>
+      <td class="credits-value">${p.credits}</td>
+      <td class="items-count">${p.items.length}</td>
+      <td class="player-open-hint">Gérer →</td>
+    `;
+    tr.addEventListener('click', () => openPlayerModal(p));
+    tbody.appendChild(tr);
+  });
+}
+
+function updatePlayerRow(player) {
+  const row = document.querySelector(`.player-row[data-id="${player.id}"]`);
+  if (!row) return;
+  row.querySelector('.credits-value').textContent = player.credits;
+  row.querySelector('.items-count').textContent = player.items.length;
+  row.querySelector('.player-username').innerHTML =
+    `${escapeHtml(player.username)}${player.ban ? '<span class="ban-badge">Banni</span>' : ''}`;
+}
+
+/* ---- account edit modal ---- */
+
+function setupPlayerModal() {
+  el('pm-close').addEventListener('click', closePlayerModal);
+  el('player-modal-backdrop').addEventListener('click', (e) => {
+    if (e.target === el('player-modal-backdrop')) closePlayerModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !el('player-modal-backdrop').hidden) closePlayerModal();
+  });
+  el('pm-credits-save').addEventListener('click', saveCreditsModal);
+  el('pm-credits-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveCreditsModal();
+  });
+  el('pm-catalog-search').addEventListener('input', () => {
+    if (activeModalPlayer) renderCatalogGrid(activeModalPlayer);
+  });
+}
+
+function avatarColor(username) {
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 62%, 52%)`;
+}
+
+function openPlayerModal(player) {
+  activeModalPlayer = player;
+  activeCatalogTab = 'all';
+
+  el('pm-avatar').textContent = player.username.slice(0, 1);
+  el('pm-avatar').style.background = avatarColor(player.username);
+  el('pm-username').textContent = player.username;
+  el('pm-created').textContent = `Créé le ${new Date(player.createdAt).toLocaleDateString('fr-FR')}`;
+  el('pm-credits-input').value = player.credits;
+  el('pm-credits-feedback').textContent = '';
+  el('pm-credits-feedback').className = 'pm-save-feedback';
+  el('pm-catalog-search').value = '';
+  selectedBanDuration = '24h';
+  banCustomValue = 1;
+  banCustomUnit = 'hours';
+
+  renderOwnedGroups(player);
+  renderCatalogTabs();
+  renderCatalogGrid(player);
+  renderBanSection(player);
+
+  el('player-modal-backdrop').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closePlayerModal() {
+  el('player-modal-backdrop').hidden = true;
+  document.body.style.overflow = '';
+  activeModalPlayer = null;
+}
+
+/* ---- moderation / bans ---- */
+
+function banDeviceNote(ban) {
+  const bits = [];
+  if (ban.fingerprint) bits.push('appareil');
+  if (ban.ip) bits.push(`IP (${ban.ip})`);
+  if (!bits.length) return '';
+  return `<div class="pm-ban-device-note">🔒 ${escapeHtml(bits.join(' + '))} également bloqué${bits.length > 1 ? 's' : ''}</div>`;
+}
+
+function renderBanSection(player) {
+  const container = el('pm-ban-section');
+
+  if (player.ban) {
+    const untilText = player.ban.until == null
+      ? 'Banni définitivement'
+      : `Banni jusqu'au ${new Date(player.ban.until).toLocaleString('fr-FR')}`;
+    container.innerHTML = `
+      <div class="pm-ban-active-card">
+        <span class="pm-ban-icon">🚫</span>
+        <div class="pm-ban-info">
+          <div class="pm-ban-until">${escapeHtml(untilText)}</div>
+          ${player.ban.reason ? `<div class="pm-ban-reason-display">${escapeHtml(player.ban.reason)}</div>` : ''}
+          ${banDeviceNote(player.ban)}
+          ${player.ban.ip ? '<button class="pm-ban-ip-remove" id="pm-ban-ip-remove">Retirer le blocage IP</button>' : ''}
+        </div>
+        <button class="btn-secondary" id="pm-unban-btn">Lever le bannissement</button>
+      </div>
+    `;
+    el('pm-unban-btn').addEventListener('click', () => unbanPlayer(player));
+    const ipRemoveBtn = el('pm-ban-ip-remove');
+    if (ipRemoveBtn) ipRemoveBtn.addEventListener('click', () => removeBanIp(player));
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="pm-ban-form">
+      <div class="ban-duration-pills" id="ban-duration-pills">
+        ${BAN_DURATIONS.map((d) => `<button type="button" data-key="${d.key}" class="ban-pill${d.key === selectedBanDuration ? ' active' : ''}">${d.label}</button>`).join('')}
+        <button type="button" data-key="custom" class="ban-pill${selectedBanDuration === 'custom' ? ' active' : ''}">Personnalisé</button>
+        <button type="button" data-key="permanent" class="ban-pill ban-pill-danger${selectedBanDuration === 'permanent' ? ' active' : ''}">Permanent</button>
+      </div>
+      <div class="pm-ban-custom-row" id="pm-ban-custom-row"${selectedBanDuration === 'custom' ? '' : ' hidden'}>
+        <input type="number" id="pm-ban-custom-value" class="pm-ban-custom-value" min="1" step="1" value="${banCustomValue}" />
+        <select id="pm-ban-custom-unit" class="pm-ban-custom-unit">
+          <option value="minutes"${banCustomUnit === 'minutes' ? ' selected' : ''}>minutes</option>
+          <option value="hours"${banCustomUnit === 'hours' ? ' selected' : ''}>heures</option>
+          <option value="days"${banCustomUnit === 'days' ? ' selected' : ''}>jours</option>
+        </select>
+      </div>
+      <label class="pm-ban-ip-toggle">
+        <input type="checkbox" id="pm-ban-include-ip" />
+        Bannir aussi l'IP <span class="muted">— peut bloquer d'autres joueurs sur le même réseau (WiFi partagé, soirée...)</span>
+      </label>
+      <div class="pm-ban-row">
+        <input type="text" id="pm-ban-reason" class="pm-ban-reason-input" placeholder="Raison (optionnel)" maxlength="200" />
+        <button class="btn-danger" id="pm-ban-submit">Bannir</button>
+      </div>
+    </div>
+  `;
+
+  container.querySelectorAll('.ban-pill').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      selectedBanDuration = btn.dataset.key;
+      container.querySelectorAll('.ban-pill').forEach((b) => b.classList.toggle('active', b === btn));
+      el('pm-ban-custom-row').hidden = selectedBanDuration !== 'custom';
+    });
+  });
+  el('pm-ban-custom-value').addEventListener('input', (e) => {
+    banCustomValue = Math.max(1, Number(e.target.value) || 1);
+  });
+  el('pm-ban-custom-unit').addEventListener('change', (e) => {
+    banCustomUnit = e.target.value;
+  });
+  el('pm-ban-submit').addEventListener('click', () => banPlayer(player));
+}
+
+async function banPlayer(player) {
+  const permanent = selectedBanDuration === 'permanent';
+  let durationMs = null;
+  let durationLabel = '';
+
+  if (!permanent) {
+    if (selectedBanDuration === 'custom') {
+      durationMs = banCustomValue * BAN_UNIT_MS[banCustomUnit];
+      durationLabel = `${banCustomValue} ${BAN_UNIT_LABELS[banCustomUnit]}`;
+    } else {
+      const duration = BAN_DURATIONS.find((d) => d.key === selectedBanDuration);
+      durationMs = duration.ms;
+      durationLabel = duration.label;
+    }
+    if (!Number.isFinite(durationMs) || durationMs <= 0) {
+      alert('Durée invalide.');
+      return;
+    }
+  }
+
+  const reason = (el('pm-ban-reason')?.value || '').trim();
+  const includeIp = !!el('pm-ban-include-ip')?.checked;
+  const confirmMsg = permanent
+    ? `Bannir ${player.username} définitivement ?`
+    : `Bannir ${player.username} pendant ${durationLabel} ?`;
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const res = await fetch(`/api/players/${selectedPlayersSiteId}/${player.id}/ban`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permanent, durationMs: permanent ? null : durationMs, reason, includeIp }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'ban failed');
+    }
+    const data = await res.json();
+    player.ban = data.ban;
+    renderBanSection(player);
+    updatePlayerRow(player);
+  } catch (e) {
+    alert(e.message && e.message !== 'ban failed' ? e.message : 'Impossible de bannir ce joueur.');
+  }
+}
+
+async function unbanPlayer(player) {
+  if (!confirm(`Lever le bannissement de ${player.username} ?`)) return;
+  try {
+    const res = await fetch(`/api/players/${selectedPlayersSiteId}/${player.id}/ban`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('unban failed');
+    player.ban = null;
+    renderBanSection(player);
+    updatePlayerRow(player);
+  } catch (e) {
+    alert('Impossible de lever le bannissement.');
+  }
+}
+
+async function removeBanIp(player) {
+  try {
+    const res = await fetch(`/api/players/${selectedPlayersSiteId}/${player.id}/ban/ip`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('remove ip failed');
+    const data = await res.json();
+    player.ban = data.ban;
+    renderBanSection(player);
+  } catch (e) {
+    alert("Impossible de retirer le blocage IP.");
+  }
+}
+
+function groupOwnedItems(player) {
+  const groups = {};
+  player.items.forEach((itemId) => {
+    const item = findCatalogItem(itemId);
+    const kind = item ? item.kind : 'other';
+    if (!groups[kind]) groups[kind] = [];
+    groups[kind].push({ id: itemId, item });
+  });
+  return groups;
+}
+
+function renderOwnedGroups(player) {
+  const container = el('pm-owned-groups');
+  el('pm-owned-count').textContent = player.items.length;
+
+  if (!player.items.length) {
+    container.innerHTML = '<p class="pm-owned-empty">Aucun objet possédé.</p>';
+    return;
+  }
+
+  const groups = groupOwnedItems(player);
+  const order = [...catalogData.kinds.map((k) => k.kind), 'other'];
+
+  container.innerHTML = order
+    .filter((k) => groups[k] && groups[k].length)
+    .map((k) => {
+      const chips = groups[k]
+        .map(({ id, item }) => {
+          const name = item ? item.label : id;
+          const color = item && item.rarity ? catalogData.rarities[item.rarity]?.color : '';
+          const style = color ? ` style="--rarity-color:${color}"` : '';
+          return `<span class="owned-item-chip"${style}>${escapeHtml(name)}<button class="owned-item-remove" data-item="${escapeHtml(id)}" title="Retirer">×</button></span>`;
+        })
+        .join('');
+      return `<div><div class="owned-group-title">${escapeHtml(kindLabel(k))} (${groups[k].length})</div><div class="owned-items-grid">${chips}</div></div>`;
+    })
+    .join('');
+
+  container.querySelectorAll('.owned-item-remove').forEach((btn) => {
+    btn.addEventListener('click', () => removeOwnedItem(player, btn.dataset.item));
+  });
+}
+
+function renderCatalogTabs() {
+  const container = el('pm-catalog-tabs');
+  const tabs = [{ kind: 'all', label: 'Tous' }, ...catalogData.kinds];
+  container.innerHTML = tabs
+    .map((t) => `<button class="pm-catalog-tab${t.kind === activeCatalogTab ? ' active' : ''}" data-kind="${t.kind}">${escapeHtml(t.label)}</button>`)
+    .join('');
+
+  container.querySelectorAll('.pm-catalog-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      activeCatalogTab = btn.dataset.kind;
+      container.querySelectorAll('.pm-catalog-tab').forEach((b) => b.classList.toggle('active', b === btn));
+      renderCatalogGrid(activeModalPlayer);
+    });
+  });
+}
+
+function renderCatalogGrid(player) {
+  const search = el('pm-catalog-search').value.trim().toLowerCase();
+  const owned = new Set(player.items);
+
+  const items = catalogData.items.filter((item) => {
+    if (owned.has(item.id)) return false;
+    if (activeCatalogTab !== 'all' && item.kind !== activeCatalogTab) return false;
+    if (search && !item.label.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  const grid = el('pm-catalog-grid');
+  if (!items.length) {
+    grid.innerHTML = '<p class="pm-catalog-empty">Aucun objet trouvé.</p>';
+    return;
+  }
+
+  grid.innerHTML = items
+    .map((item) => {
+      const color = item.rarity ? catalogData.rarities[item.rarity]?.color : '';
+      const style = color ? ` style="--rarity-color:${color}"` : '';
+      const rarityLabel = item.rarity ? catalogData.rarities[item.rarity]?.label : null;
+      const meta = [kindLabel(item.kind), rarityLabel || (item.cost ? `${item.cost} crédits` : 'Exclusif booster')]
+        .filter(Boolean)
+        .join(' · ');
+      return `
+        <div class="catalog-item-card"${style}>
+          <div class="catalog-item-label">${escapeHtml(item.label)}</div>
+          <div class="catalog-item-meta">${escapeHtml(meta)}</div>
+          <button class="catalog-item-add" data-item="${escapeHtml(item.id)}">+ Ajouter</button>
+        </div>
+      `;
+    })
+    .join('');
+
+  grid.querySelectorAll('.catalog-item-add').forEach((btn) => {
+    btn.addEventListener('click', () => addOwnedItem(player, btn.dataset.item, btn));
+  });
+}
+
+async function saveCreditsModal() {
+  if (!activeModalPlayer) return;
+  const input = el('pm-credits-input');
+  const btn = el('pm-credits-save');
+  const feedback = el('pm-credits-feedback');
+  const amount = Number(input.value);
+  if (!Number.isFinite(amount) || amount < 0) return;
+
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/players/${selectedPlayersSiteId}/${activeModalPlayer.id}/credits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount }),
+    });
+    if (!res.ok) throw new Error('save failed');
+    const data = await res.json();
+    activeModalPlayer.credits = data.credits;
+    input.value = data.credits;
+    feedback.textContent = 'Enregistré ✓';
+    feedback.className = 'pm-save-feedback show';
+    updatePlayerRow(activeModalPlayer);
+  } catch (e) {
+    feedback.textContent = "Erreur lors de l'enregistrement";
+    feedback.className = 'pm-save-feedback show error';
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => feedback.classList.remove('show'), 2500);
+  }
+}
+
+async function removeOwnedItem(player, itemId) {
+  try {
+    const res = await fetch(`/api/players/${selectedPlayersSiteId}/${player.id}/items/${encodeURIComponent(itemId)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('remove failed');
+    const data = await res.json();
+    player.items = data.items;
+    renderOwnedGroups(player);
+    renderCatalogGrid(player);
+    updatePlayerRow(player);
+  } catch (e) {
+    alert("Impossible de retirer l'objet.");
+  }
+}
+
+async function addOwnedItem(player, itemId, btn) {
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/players/${selectedPlayersSiteId}/${player.id}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemId }),
+    });
+    if (!res.ok) throw new Error('add failed');
+    const data = await res.json();
+    player.items = data.items;
+    renderOwnedGroups(player);
+    renderCatalogGrid(player);
+    updatePlayerRow(player);
+  } catch (e) {
+    alert("Impossible d'ajouter l'objet.");
+    btn.disabled = false;
+  }
+}
+
 /* ---------------- refresh cycles ---------------- */
 
 async function refreshOverview() {
@@ -525,6 +998,7 @@ async function init() {
   setupSidebar();
   setupRangeButtons();
   setupTabs();
+  setupPlayerModal();
 
   mainChart = makeTimeChart(el('chart-main'), [
     { label: 'CPU %', color: '#5b8cff' },
@@ -551,6 +1025,7 @@ async function init() {
   }
   renderNavSites();
   renderSiteCards();
+  setupPlayersSection();
 
   await refreshOverview();
   await refreshHistory();

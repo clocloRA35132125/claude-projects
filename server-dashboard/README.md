@@ -62,17 +62,23 @@ node src/server.js
 
 Puis depuis un appareil connecté à ton Tailscale : `http://<IP_TAILSCALE>:4500`
 
-## 6. Installer comme service systemd (démarrage auto + redémarrage si crash)
+## 6. Installer comme service systemd **utilisateur** (démarrage auto + redémarrage si crash, sans sudo)
 
 ```bash
-sudo cp deploy/server-dashboard.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now server-dashboard
-sudo systemctl status server-dashboard
+mkdir -p ~/.config/systemd/user
+cp deploy/server-dashboard.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now server-dashboard
+systemctl --user status server-dashboard
 ```
 
-Si ton user Linux n'est pas `server` ou que le chemin diffère, édite d'abord
-`deploy/server-dashboard.service` (`User=`, `WorkingDirectory=`, `EnvironmentFile=`).
+C'est un service **utilisateur** (`systemctl --user`), pas système — aucun `sudo`
+nécessaire. Il démarre automatiquement à la connexion de ton utilisateur ; pour
+qu'il tourne même sans session ouverte, active le lingering une fois :
+`sudo loginctl enable-linger $USER` (ça, ça demande sudo, une seule fois).
+
+Si le chemin du projet diffère de `~/server-dashboard`, édite d'abord
+`deploy/server-dashboard.service` (`WorkingDirectory=`, `EnvironmentFile=`).
 
 ## Ajouter un autre site plus tard
 
@@ -98,7 +104,7 @@ Dans `config/sites.json`, ajoute un objet :
 Redémarre le service dashboard après modification :
 
 ```bash
-sudo systemctl restart server-dashboard
+systemctl --user restart server-dashboard
 ```
 
 ## Sécurité

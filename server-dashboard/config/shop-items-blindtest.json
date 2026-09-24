@@ -1,0 +1,75 @@
+{
+  "rarities": {
+    "common": { "label": "Commune", "color": "#9ca3af" },
+    "rare": { "label": "Rare", "color": "#38bdf8" },
+    "epic": { "label": "Épique", "color": "#c084fc" },
+    "legendary": { "label": "Légendaire", "color": "#fbbf24" }
+  },
+  "kinds": [
+    { "kind": "title", "label": "Titres" },
+    { "kind": "banner", "label": "Bannières" },
+    { "kind": "theme", "label": "Thèmes" },
+    { "kind": "effect", "label": "Effets de salon" },
+    { "kind": "avatar", "label": "Avatars" },
+    { "kind": "color", "label": "Couleurs" }
+  ],
+  "items": [
+    { "id": "effect-confetti", "kind": "effect", "label": "Pluie de confettis", "cost": 200 },
+    { "id": "effect-bubbles", "kind": "effect", "label": "Bulles", "cost": 150 },
+    { "id": "effect-stars", "kind": "effect", "label": "Étoiles filantes", "cost": 220 },
+    { "id": "effect-disco", "kind": "effect", "label": "Lumières disco", "cost": 300 },
+    { "id": "effect-fireworks", "kind": "effect", "label": "Feux d'artifice", "cost": 350 },
+
+    { "id": "theme-aurora", "kind": "theme", "label": "Aurore", "cost": 150 },
+    { "id": "theme-sakura", "kind": "theme", "label": "Sakura", "cost": 150 },
+    { "id": "theme-neon", "kind": "theme", "label": "Néon", "cost": 200 },
+    { "id": "theme-inferno", "kind": "theme", "label": "Inferno", "cost": 200 },
+    { "id": "theme-gold", "kind": "theme", "label": "Or", "cost": 250 },
+
+    { "id": "banner-flames", "kind": "banner", "label": "Flammes", "cost": 120 },
+    { "id": "banner-aurora", "kind": "banner", "label": "Aurore boréale", "cost": 120 },
+    { "id": "banner-galaxy", "kind": "banner", "label": "Galaxie", "cost": 180 },
+    { "id": "banner-neon", "kind": "banner", "label": "Néon", "cost": 200 },
+    { "id": "banner-gold", "kind": "banner", "label": "Or liquide", "cost": 250 },
+
+    { "id": "avatar-crown", "kind": "avatar", "label": "Couronne", "cost": 30 },
+    { "id": "avatar-ghost", "kind": "avatar", "label": "Fantôme", "cost": 30 },
+    { "id": "avatar-alien", "kind": "avatar", "label": "Alien", "cost": 40 },
+    { "id": "avatar-robot", "kind": "avatar", "label": "Robot", "cost": 40 },
+    { "id": "avatar-dragon", "kind": "avatar", "label": "Dragon", "cost": 60 },
+    { "id": "avatar-diamond", "kind": "avatar", "label": "Diamant", "cost": 100 },
+
+    { "id": "color-gold", "kind": "color", "label": "Or", "cost": 50 },
+    { "id": "color-rose", "kind": "color", "label": "Rose vif", "cost": 25 },
+    { "id": "color-lime", "kind": "color", "label": "Citron vert", "cost": 25 },
+    { "id": "color-violet", "kind": "color", "label": "Violet profond", "cost": 25 },
+
+    { "id": "card-title-melomane", "kind": "title", "label": "Mélomane", "cost": 0, "rarity": "common", "dropOnly": true },
+    { "id": "card-title-oreille-curieuse", "kind": "title", "label": "Oreille curieuse", "cost": 0, "rarity": "common", "dropOnly": true },
+    { "id": "card-title-fan-refrains", "kind": "title", "label": "Fan de refrains", "cost": 0, "rarity": "common", "dropOnly": true },
+    { "id": "card-title-fredonneur", "kind": "title", "label": "Fredonneur", "cost": 0, "rarity": "common", "dropOnly": true },
+    { "id": "card-title-petit-prodige", "kind": "title", "label": "Petit prodige", "cost": 0, "rarity": "common", "dropOnly": true },
+    { "id": "card-title-curieux-du-son", "kind": "title", "label": "Curieux du son", "cost": 0, "rarity": "common", "dropOnly": true },
+
+    { "id": "card-title-shazam-humain", "kind": "title", "label": "Shazam humain", "cost": 0, "rarity": "rare", "dropOnly": true },
+    { "id": "card-title-chasseur-de-hits", "kind": "title", "label": "Chasseur de hits", "cost": 0, "rarity": "rare", "dropOnly": true },
+    { "id": "card-title-dj-dimanche", "kind": "title", "label": "DJ du dimanche", "cost": 0, "rarity": "rare", "dropOnly": true },
+    { "id": "card-title-roi-du-refrain", "kind": "title", "label": "Roi du refrain", "cost": 0, "rarity": "rare", "dropOnly": true },
+    { "id": "card-title-oreille-dor", "kind": "title", "label": "Oreille d'or", "cost": 0, "rarity": "rare", "dropOnly": true },
+    { "id": "card-banner-waves", "kind": "banner", "label": "Bannière Vagues", "cost": 0, "rarity": "rare", "dropOnly": true },
+    { "id": "card-banner-candy", "kind": "banner", "label": "Bannière Bonbon", "cost": 0, "rarity": "rare", "dropOnly": true },
+
+    { "id": "card-title-encyclopedie", "kind": "title", "label": "Encyclopédie du son", "cost": 0, "rarity": "epic", "dropOnly": true },
+    { "id": "card-title-maitre-blindtest", "kind": "title", "label": "Maître du Blindtest", "cost": 0, "rarity": "epic", "dropOnly": true },
+    { "id": "card-title-legende-platines", "kind": "title", "label": "Légende des platines", "cost": 0, "rarity": "epic", "dropOnly": true },
+    { "id": "card-title-metronome", "kind": "title", "label": "Métronome vivant", "cost": 0, "rarity": "epic", "dropOnly": true },
+    { "id": "card-banner-holo", "kind": "banner", "label": "Bannière Holographique", "cost": 0, "rarity": "epic", "dropOnly": true },
+    { "id": "card-banner-storm", "kind": "banner", "label": "Bannière Tempête", "cost": 0, "rarity": "epic", "dropOnly": true },
+
+    { "id": "card-title-dieu-blindtest", "kind": "title", "label": "Dieu du Blindtest", "cost": 0, "rarity": "legendary", "dropOnly": true },
+    { "id": "card-title-sans-faute", "kind": "title", "label": "Le Sans-Faute", "cost": 0, "rarity": "legendary", "dropOnly": true },
+    { "id": "card-title-oreille-absolue", "kind": "title", "label": "Oreille Absolue", "cost": 0, "rarity": "legendary", "dropOnly": true },
+    { "id": "card-banner-phoenix", "kind": "banner", "label": "Bannière Phénix", "cost": 0, "rarity": "legendary", "dropOnly": true },
+    { "id": "card-banner-void", "kind": "banner", "label": "Bannière Néant", "cost": 0, "rarity": "legendary", "dropOnly": true }
+  ]
+}
